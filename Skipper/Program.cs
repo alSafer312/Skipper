@@ -1,4 +1,9 @@
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using Skipper.Data;
 var builder = WebApplication.CreateBuilder(args);
+builder.Services.AddDbContext<SkipperContext>(options =>
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection") ?? throw new InvalidOperationException("Connection string 'SkipperContext' not found.")));
 
 // Add services to the container.
 builder.Services.AddControllersWithViews();
