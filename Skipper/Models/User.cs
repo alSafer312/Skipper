@@ -6,8 +6,10 @@ namespace Skipper.Models
     {
         public int Id { get; set; }
         public string Email { get; set; } = string.Empty;
+        public string Role { get; set; } = string.Empty;
         public byte[] PasswordHash { get; set; } =  new byte[32];
         public byte[] PasswordSalt { get; set; } = new byte[32];
+        public string? VeryficationToken { get; set; }
 
     }
 }
