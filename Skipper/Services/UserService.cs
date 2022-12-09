@@ -1,54 +1,46 @@
-﻿using Skipper.Helpers;
+﻿using AutoMapper;
+using Skipper.Helpers;
+using Skipper.Models.DTOs.Incomig;
+using Skipper.Models.DTOs.Outgoing;
 using System.Security.Cryptography;
+using Skipper.Extensions;
+using Skipper.Core;
+using System.Security.Claims;
 
 namespace Skipper.Services
 {
     public class UserService : IUserService
     {
-        private readonly DataContext _dataContext;
+        private readonly IUnitOfWork _unitOfWork;
+        private readonly IMapper _mapper;
         private readonly IConfiguration _configuration;
+        private readonly IHttpContextAccessor _contextAccessor;
 
-        public UserService(DataContext dataContext, IConfiguration configuration)
+        public UserService(IUnitOfWork unitOfWork,
+                           IMapper mapper, 
+                           IConfiguration configuration, 
+                           IHttpContextAccessor httpContextAccessor)
         {
-            _dataContext = dataContext;
+            _unitOfWork = unitOfWork;
+            _mapper = mapper;
             _configuration = configuration;
-        }
-
-        public AuthenticateResponse Authenticate(AuthenticateRequest request)
-        {
-            var user = _dataContext.Users.FirstOrDefault(u => u.Email == request.Email);
-            if(user == null)
-            {
-                // todo: need to add logger
-                return null;
-            }
-            if (!VerifyPasswordHash(request.Password, user.PasswordHash, user.PasswordSalt))
-            {
-                // todo: need to add logger
-                return null;
-            }
-
-            var token = _configuration.GenerateJwt(user);
-            return new AuthenticateResponse(user, token);
+            _contextAccessor = httpContextAccessor;
         }
 
         public async Task<AuthenticateResponse> Register(AuthenticateRequest request)
         {
-            var user = new User();
-            if (_dataContext.Users.Any(u => u.Email == request.Email))
+            if (await _unitOfWork.Users.Any(request.Email))
             {
                 // todo: need to add logger
                 return null;
             }
-            CreatePasswordHash(request.Password, out byte[] passwordHash, out byte[] passwordSalt);
+            var user = _mapper.Map<User>(request);
+            user.Role = "Unverified";
+            user.VeryficationToken = _configuration.GenerateRandomToken();
 
-            user.Email = request.Email;
-            user.PasswordHash = passwordHash;
-            user.PasswordSalt = passwordSalt;
-            user.Role = "Unveryfied";
+            await _unitOfWork.Users.Add(user);
+            await _unitOfWork.CompleteAsync();
 
-            _dataContext.Users.Add(user);
-            await _dataContext.SaveChangesAsync();
             var response = Authenticate(new AuthenticateRequest
             {
                 Email = request.Email,
@@ -58,21 +50,75 @@ namespace Skipper.Services
             return response;
         }
 
-        private void CreatePasswordHash(string password, out byte[] passwordHash, out byte[] passwordSalt)
+        public AuthenticateResponse Authenticate(AuthenticateRequest request)
         {
-            using (var hmac = new HMACSHA512())
+            var user = _unitOfWork.Users.GetByEmail(request.Email);
+            if(user == null)
             {
-                passwordSalt = hmac.Key;
-                passwordHash = hmac.ComputeHash(System.Text.Encoding.UTF8.GetBytes(password));
+                //todo: logger
+                return null;
             }
+            if(!request.Password.TrustTo(user.PasswordHash, user.PasswordSalt))
+            {
+                //todo: logger
+                return null;
+            }
+            var response = _mapper.Map<AuthenticateResponse>(user);
+            response.AccesToken = _configuration.GenerateJwt(user);
+            return response;
         }
-        private bool VerifyPasswordHash(string password, byte[] passwordHash, byte[] passwordSalt)
+
+        public UserSettingsResponse GetUpSettings()
         {
-            using (var hmac = new HMACSHA512(passwordSalt))
+            var userSettings = _unitOfWork.UserSettings.GetByUserId(Guid.Parse(
+                                                        _contextAccessor
+                                                        .HttpContext.User                                            
+                                                        .FindFirstValue(ClaimTypes.NameIdentifier)));
+            if (userSettings == null)
             {
-                var computedHash = hmac.ComputeHash(System.Text.Encoding.UTF8.GetBytes(password));
-                return computedHash.SequenceEqual(passwordHash);
+                //todo: logger
+                return null;
             }
+                return _mapper.Map<UserSettingsResponse>(userSettings);
         }
+
+        public async Task<UserSettingsResponse> SetUpSettings(UserSettingsRequest request)
+        {
+            if (_contextAccessor.HttpContext == null)
+            {
+                //todo: logger
+                return null;
+            }
+            var userId = _contextAccessor.HttpContext.User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var userSettings = await _unitOfWork.UserSettings.GetByUserId(Guid.Parse(userId));
+            if(userSettings == null)
+            {
+                //todo: logger
+                return null;
+            }
+            userSettings = _mapper.Map<UserSettings>(request);
+
+            //await _unitOfWork.UserSettings.Update(userSettings);
+            await _unitOfWork.CompleteAsync();
+
+            var response = GetUpSettings();
+
+            return response;
+        }
+
+        public async Task<string> Verify(string token)
+        {
+            var user = await _unitOfWork.Users.GetByVerificationToken(token);
+            if (user == null)
+            {
+                // todo: need to add logger
+                return null;
+            }
+            user.Role = "Menty";
+            await _unitOfWork.CompleteAsync();
+
+            return "User verified!";
+        }
+
     }
 }

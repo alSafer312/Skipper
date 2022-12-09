@@ -12,7 +12,9 @@ namespace Skipper.Helpers
         {
             List<Claim> claims = new List<Claim>()
             {
-                new Claim(ClaimTypes.Email, user.Email)
+                new Claim(ClaimTypes.Email, user.Email),
+                new Claim(ClaimTypes.Role, user.Role),
+                new Claim(ClaimTypes.NameIdentifier, user.Id.ToString())
             };
             var tokenHanlder = new JwtSecurityTokenHandler();
             var key = Encoding.UTF8.GetBytes(configuration.GetSection("Jwt:Key").Value);
@@ -25,6 +27,10 @@ namespace Skipper.Helpers
             };
             var token = tokenHanlder.CreateToken(tokenDescriptor);
             return tokenHanlder.WriteToken(token);
+        }
+        public static string GenerateRandomToken(this IConfiguration configuration)
+        {
+            return Convert.ToHexString(RandomNumberGenerator.GetBytes(64));
         }
     }
 }

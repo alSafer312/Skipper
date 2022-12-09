@@ -1,15 +1,20 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using Skipper.Enums;
+using System.ComponentModel.DataAnnotations;
 
 namespace Skipper.Models
 {
     public class User
     {
-        public int Id { get; set; }
+        public Guid Id { get; set; }
+        //public Guid UserSettingsId { get; set; }
         public string Email { get; set; } = string.Empty;
+
+        //public UserRoleEnum Role { get; set; }
+
         public string Role { get; set; } = string.Empty;
         public byte[] PasswordHash { get; set; } =  new byte[32];
         public byte[] PasswordSalt { get; set; } = new byte[32];
-        public string? VeryficationToken { get; set; }
-
+        public string VeryficationToken { get; set; } = string.Empty;
+        public virtual UserSettings UserSettings { get; set; }
     }
 }

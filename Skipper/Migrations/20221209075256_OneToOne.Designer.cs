@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Skipper.Data;
 
@@ -11,9 +12,11 @@ using Skipper.Data;
 namespace Skipper.Migrations
 {
     [DbContext(typeof(DataContext))]
-    partial class DataContextModelSnapshot : ModelSnapshot
+    [Migration("20221209075256_OneToOne")]
+    partial class OneToOne
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -41,7 +44,7 @@ namespace Skipper.Migrations
 
                     b.HasIndex("UserSettingsId");
 
-                    b.ToTable("CommunicationWays", (string)null);
+                    b.ToTable("CommunicationWays");
                 });
 
             modelBuilder.Entity("Skipper.Models.NotificationSettings", b =>
@@ -69,7 +72,7 @@ namespace Skipper.Migrations
 
                     b.HasIndex("UserSettingsId");
 
-                    b.ToTable("NotificationSettings", (string)null);
+                    b.ToTable("NotificationSettings");
                 });
 
             modelBuilder.Entity("Skipper.Models.User", b =>
@@ -95,7 +98,7 @@ namespace Skipper.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Users", (string)null);
+                    b.ToTable("Users");
                 });
 
             modelBuilder.Entity("Skipper.Models.UserSettings", b =>
@@ -139,7 +142,7 @@ namespace Skipper.Migrations
                     b.HasIndex("UserId")
                         .IsUnique();
 
-                    b.ToTable("UsersSettings", (string)null);
+                    b.ToTable("UsersSettings");
                 });
 
             modelBuilder.Entity("Skipper.Models.CommunicationWay", b =>

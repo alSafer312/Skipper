@@ -1,5 +1,7 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
+using Skipper.Models.DTOs.Incomig;
 using Skipper.Services;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
@@ -39,99 +41,36 @@ namespace Skipper.Controllers
             {
                 return BadRequest("Email or password is incorrect");
             }
+
             return Ok(response);
         }
 
-        /*
-        private readonly DataContext _context;
-        private readonly IConfiguration _configuration;
-        public static User user = new User();
-
-        public UserController(DataContext context, IConfiguration configuration)
+        [HttpPost("verify")]
+        public async Task<IActionResult> Verify(string token)
         {
-            _context = context;
-            _configuration = configuration;
-        }
+            var response = await _userService.Verify(token);
 
-
-
-
-        
-        [HttpPost("register")]
-        public async Task<ActionResult<User>> Register(AuthenticateRequest request)
-        {
-            if(_context.Users.Any(u => u.Email == request.Email))
+            if(response == null)
             {
-                return BadRequest("User already exist.");
+                return BadRequest("Didn't verified");
             }
 
-            CreatePasswordHash(request.Password, out byte[] passwordHash, out byte[] passwordSalt);
-
-            user.Email = request.Email;
-            user.PasswordHash = passwordHash;
-            user.PasswordSalt = passwordSalt;
-
-            _context.Users.Add(user);
-            await _context.SaveChangesAsync();
-
-            return Ok(user);
+            return Ok(response);
         }
 
-        [HttpPost("login")]
-        public async Task<ActionResult<string>> Login(AuthenticateRequest request)
+        [HttpPost("user-settings")]
+        public async Task<IActionResult> UserSettings(UserSettingsRequest model)
         {
-            user = await _context.Users.FirstOrDefaultAsync(u => u.Email == request.Email);
-            if (user == null)
-            {
-                return BadRequest("User not found.");
-            }
-            if(!VerifyPasswordHash(request.Password, user.PasswordHash, user.PasswordSalt))
-            {
-                return BadRequest("Wrong password");
-            }
-
-            string token = CreateToken(user);
-            return Ok(token);
+            _userService.SetUpSettings(model);
+            return Ok(model);
         }
 
-        private string CreateToken(User user)
+        [Authorize(Roles = "Menty")]
+        [HttpGet]
+        public IActionResult Test()
         {
-            List<Claim> claims = new List<Claim>()
-            {
-                new Claim(ClaimTypes.Email, user.Email)
-            };
-
-            var key = new SymmetricSecurityKey(System.Text.Encoding.UTF8.GetBytes(
-                _configuration.GetSection("AppSettings:Token").Value));
-
-            var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha512Signature);
-
-            var token = new JwtSecurityToken(
-                claims: claims,
-                expires: DateTime.UtcNow.Add(TimeSpan.FromHours(2)),
-                signingCredentials: creds);
-
-            var jwt = new JwtSecurityTokenHandler().WriteToken(token);
-
-            return jwt;
+            return Ok("Hello menty");
         }
 
-        private void CreatePasswordHash(string password, out byte[] passwordHash, out byte[] passwordSalt)
-        {
-            using (var hmac = new HMACSHA512())
-            {
-                passwordSalt = hmac.Key;
-                passwordHash = hmac.ComputeHash(System.Text.Encoding.UTF8.GetBytes(password));
-            }
-        }
-
-        private bool VerifyPasswordHash(string password, byte[] passwordHash, byte[] passwordSalt)
-        {
-            using(var hmac = new HMACSHA512(passwordSalt))
-            {
-                var computedHash = hmac.ComputeHash(System.Text.Encoding.UTF8.GetBytes(password));
-                return computedHash.SequenceEqual(passwordHash);
-            }
-        }*/
     }
 }
