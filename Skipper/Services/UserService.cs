@@ -2,10 +2,11 @@
 using Skipper.Helpers;
 using Skipper.Models.DTOs.Incomig;
 using Skipper.Models.DTOs.Outgoing;
-using System.Security.Cryptography;
 using Skipper.Extensions;
 using Skipper.Core;
 using System.Security.Claims;
+using Skipper.Enums;
+using System.IO;
 
 namespace Skipper.Services
 {
@@ -15,16 +16,19 @@ namespace Skipper.Services
         private readonly IMapper _mapper;
         private readonly IConfiguration _configuration;
         private readonly IHttpContextAccessor _contextAccessor;
+        private readonly IWebHostEnvironment _webHostEnvironment;
 
         public UserService(IUnitOfWork unitOfWork,
-                           IMapper mapper, 
-                           IConfiguration configuration, 
-                           IHttpContextAccessor httpContextAccessor)
+                           IMapper mapper,
+                           IConfiguration configuration,
+                           IHttpContextAccessor httpContextAccessor,
+                           IWebHostEnvironment webHostEnvironment)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
             _configuration = configuration;
             _contextAccessor = httpContextAccessor;
+            _webHostEnvironment = webHostEnvironment;
         }
 
         public async Task<AuthenticateResponse> Register(AuthenticateRequest request)
@@ -53,12 +57,12 @@ namespace Skipper.Services
         public AuthenticateResponse Authenticate(AuthenticateRequest request)
         {
             var user = _unitOfWork.Users.GetByEmail(request.Email);
-            if(user == null)
+            if (user == null)
             {
                 //todo: logger
                 return null;
             }
-            if(!request.Password.TrustTo(user.PasswordHash, user.PasswordSalt))
+            if (!request.Password.TrustTo(user.PasswordHash, user.PasswordSalt))
             {
                 //todo: logger
                 return null;
@@ -72,14 +76,16 @@ namespace Skipper.Services
         {
             var userSettings = _unitOfWork.UserSettings.GetByUserId(Guid.Parse(
                                                         _contextAccessor
-                                                        .HttpContext.User                                            
+                                                        .HttpContext
+                                                        .User
                                                         .FindFirstValue(ClaimTypes.NameIdentifier)));
             if (userSettings == null)
             {
                 //todo: logger
                 return null;
             }
-                return _mapper.Map<UserSettingsResponse>(userSettings);
+            var response = _mapper.Map<UserSettingsResponse>(userSettings);
+            return response;
         }
 
         public async Task<UserSettingsResponse> SetUpSettings(UserSettingsRequest request)
@@ -89,21 +95,73 @@ namespace Skipper.Services
                 //todo: logger
                 return null;
             }
+
             var userId = _contextAccessor.HttpContext.User.FindFirstValue(ClaimTypes.NameIdentifier);
-            var userSettings = await _unitOfWork.UserSettings.GetByUserId(Guid.Parse(userId));
-            if(userSettings == null)
+            var userSettings = await _unitOfWork.UserSettings.GetByUserIdAsync(Guid.Parse(userId));
+            if (userSettings == null)
             {
                 //todo: logger
                 return null;
             }
-            userSettings = _mapper.Map<UserSettings>(request);
 
-            //await _unitOfWork.UserSettings.Update(userSettings);
+            _mapper.Map<UserSettingsRequest, UserSettings>(request, userSettings);
             await _unitOfWork.CompleteAsync();
 
             var response = GetUpSettings();
 
             return response;
+        }
+
+        public async Task<bool> UserDelete()
+        {
+            if (_contextAccessor.HttpContext == null)
+            {
+                //todo: logger
+                return false;
+            }
+            var UserSettings = _unitOfWork.UserSettings.GetByUserId(Guid.Parse(
+                                                        _contextAccessor
+                                                        .HttpContext
+                                                        .User
+                                                        .FindFirstValue(ClaimTypes.NameIdentifier)));
+
+            if (System.IO.File.Exists(Path.Combine(_webHostEnvironment.WebRootPath,
+                                                    "Images/Avatars/",
+                                                    Path.GetFileName(UserSettings.AvatarURL))))
+            {
+                System.IO.File.Delete(Path.Combine(_webHostEnvironment.WebRootPath,
+                                                    "Images/Avatars/",
+                                                    Path.GetFileName(UserSettings.AvatarURL)));
+            }                
+
+            var result = await _unitOfWork.Users.Delete(UserSettings.User);
+            await _unitOfWork.CompleteAsync();
+            return result;
+        }
+
+        public async Task<string> UploadAvatar(IFormFile file)
+        {
+            if (_contextAccessor.HttpContext == null)
+            {
+                //todo: logger
+                return null;
+            }
+            var userSettings = _unitOfWork.UserSettings.GetByUserId(Guid.Parse(
+                                                        _contextAccessor
+                                                        .HttpContext
+                                                        .User
+                                                        .FindFirstValue(ClaimTypes.NameIdentifier)));
+            try
+            {
+                userSettings.AvatarURL = await file.UploadAvatarAsync(_webHostEnvironment, userSettings.User.Id);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+                throw;
+            }
+            await _unitOfWork.CompleteAsync();
+            return "Avatar uploaded successfully";
         }
 
         public async Task<string> Verify(string token)
@@ -120,5 +178,28 @@ namespace Skipper.Services
             return "User verified!";
         }
 
+        public Dictionary<byte, string> GetCommynicationTypes()
+        {
+            var commynicationTypes = new Dictionary<byte, string>
+            {
+                [(byte)CommynicationTypeEnum.Skype] = "Skype",
+                [(byte)CommynicationTypeEnum.GoogleHangouts] = "Google Hangouts",
+                [(byte)CommynicationTypeEnum.Telegram] = "Telegram",
+                [(byte)CommynicationTypeEnum.Zoom] = "Zoom",
+                [(byte)CommynicationTypeEnum.Discord] = "Discord",
+                [(byte)CommynicationTypeEnum.VK] = "VK",
+                [(byte)CommynicationTypeEnum.WhatsApp] = "WhatsApp"
+            };
+            return commynicationTypes;
+        }
+        public Dictionary<string, string> GetTimeZones()
+        {
+            var TimeZones = new Dictionary<string, string>();
+            foreach (var item in TimeZoneInfo.GetSystemTimeZones())
+            {
+                TimeZones.Add(item.Id, item.DisplayName);
+            }            
+            return TimeZones;
+        }
     }
 }

@@ -1,5 +1,6 @@
 ﻿using Skipper.Enums;
 using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
 
 namespace Skipper.Models
 {
@@ -15,6 +16,7 @@ namespace Skipper.Models
         public byte[] PasswordHash { get; set; } =  new byte[32];
         public byte[] PasswordSalt { get; set; } = new byte[32];
         public string VeryficationToken { get; set; } = string.Empty;
+        [JsonIgnore]
         public virtual UserSettings UserSettings { get; set; }
     }
 }

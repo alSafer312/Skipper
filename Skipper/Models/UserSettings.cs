@@ -1,11 +1,21 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using AutoMapper.Configuration.Annotations;
+using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
 
 namespace Skipper.Models
 {
     public class UserSettings
     {
+        public UserSettings()
+        {
+            CommunicationWays = new HashSet<CommunicationWay>();
+            NotificationSettings = new HashSet<NotificationSettings>();
+        }
+        [Ignore]
         public Guid Id { get; set; }
+        [Ignore]
         public Guid UserId { get; set; }
+        [JsonIgnore]
         public virtual User User { get; set; }
         public virtual ICollection<CommunicationWay> CommunicationWays { get; set; }
         public virtual ICollection<NotificationSettings> NotificationSettings { get; set; }

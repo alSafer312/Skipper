@@ -10,9 +10,6 @@ namespace Skipper.Profiles
         public UserSettingsProfile()
         {
             CreateMap<UserSettingsRequest, UserSettings>()
-                /*.ForMember(
-                    dest => dest.AvatarURL,
-                    opt => opt.MapFrom(src => src.ProfileImage)) //to do: IFormFile Extension*/
                 .ForMember(
                     dest => dest.LastName,
                     opt => opt.MapFrom(src => src.LastName))
@@ -42,11 +39,11 @@ namespace Skipper.Profiles
                     opt => opt.MapFrom(src => src.NotificationSettings))
                 .ForMember(
                     dest => dest.CommunicationWays,
-                    opt => opt.MapFrom(src => src.Links));
+                    opt => opt.MapFrom(src =>  src.Links));
 
             CreateMap<UserSettings, UserSettingsResponse>()
                 .ForMember(
-                    dest => dest.AvatarURL,
+                    dest => dest.ImagePath,
                     opt => opt.MapFrom(src => src.AvatarURL))
                 .ForMember(
                     dest => dest.LastName,
@@ -66,6 +63,9 @@ namespace Skipper.Profiles
                 .ForMember(
                     dest => dest.AboutMe,
                     opt => opt.MapFrom(src => src.AboutMe))
+                .ForMember(
+                    dest => dest.Email,
+                    opt => opt.MapFrom(src => src.User.Email))
                 .ForMember(
                     dest => dest.PhoneNumber,
                     opt => opt.MapFrom(src => src.PhoneNumber))
