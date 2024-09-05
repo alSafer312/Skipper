@@ -12,5 +12,9 @@ This project is a platform for seeking/providing mentorship, developed as part o
 
  ## Previews
  ![Search_results](https://github.com/user-attachments/assets/41141920-4b7f-4c8d-9c25-2d19efae8c22)
-https://github.com/user-attachments/assets/d1263853-7050-4036-800c-70f9b43ba75d
+ 
+
+https://github.com/user-attachments/assets/8a349e2f-7c83-4f51-9a71-ce5f15bf6eee
+
+
 
